@@ -63,6 +63,15 @@ what kind of thing was found and what you chose.
 **What it will not catch:** a screenshot, drag-and-drop, or right-click → Paste — only a literal
 ⌘V keystroke is intercepted. See [Known gaps](#known-gaps) for the rest.
 
+## Settings
+
+**Settings…** (⌘,) from the menubar menu opens a small window with Appearance
+(System/Light/Dark) and Text Size (Small/Medium/Large/Extra Large) — the same two preferences
+every app in this line ships, matching the shared design system. No license section: PasteGuard
+stays fully free for now, since its core paste-interception feature isn't proven out end to end
+yet (see [Status](#status) and [Known gaps](#known-gaps)); monetization is a deliberately deferred
+later pass, not an oversight.
+
 ## Why this exists
 
 77% of workers paste sensitive data into gen-AI tools, and 82% of those pastes go through

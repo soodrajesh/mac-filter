@@ -70,9 +70,9 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
 
         let target = destination.detail.map { "\(destination.appName) — \($0)" } ?? destination.appName
 
-        let heading = label("Paste blocked", font: .systemFont(ofSize: 17, weight: .semibold))
+        let heading = label("Paste blocked", font: .app(.title))
         let subtitle = label("\(Redactor.summary(of: findings)) found in what you're pasting into \(target).",
-                             font: .systemFont(ofSize: 12),
+                             font: .app(.body),
                              color: .secondaryLabelColor)
         subtitle.preferredMaxLayoutWidth = 396
 
@@ -85,7 +85,7 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
         }
 
         let note = label("Nothing has left this Mac. PasteGuard makes no network connections.",
-                         font: .systemFont(ofSize: 11),
+                         font: .app(.callout),
                          color: .tertiaryLabelColor)
         stack.setCustomSpacing(16, after: stack.arrangedSubviews.last ?? note)
         stack.addArrangedSubview(note)
@@ -113,25 +113,17 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
     }
 
     private func findingRow(_ group: (label: String, severity: Severity, count: Int)) -> NSView {
-        let dot = label("●", font: .systemFont(ofSize: 10), color: color(for: group.severity))
+        let dot = label("●", font: .app(.footnote), color: group.severity.color)
         let text = group.count > 1 ? "\(group.label) ×\(group.count)" : group.label
-        let name = label(text, font: .systemFont(ofSize: 12, weight: .medium))
+        let name = label(text, font: .app(.body, weight: .medium))
         let severity = label(group.severity.label,
-                             font: .systemFont(ofSize: 11),
+                             font: .app(.callout),
                              color: .tertiaryLabelColor)
 
         let row = NSStackView(views: [dot, name, severity])
         row.orientation = .horizontal
         row.spacing = 7
         return row
-    }
-
-    private func color(for severity: Severity) -> NSColor {
-        switch severity {
-        case .critical: return .systemRed
-        case .high: return .systemOrange
-        case .medium: return .systemYellow
-        }
     }
 
     private func label(_ text: String,

@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        AppearanceMode.apply()
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         let menu = NSMenu()
@@ -68,6 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(.separator())
         menu.addItem(action("Scan Clipboard Now", #selector(scanClipboard)))
+        menu.addItem(action("Settings…", #selector(openSettings), key: ","))
 
         let recent = AuditLog.recentEntries(limit: 5)
         if !recent.isEmpty {
@@ -128,6 +130,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func preview(_ text: String) -> String {
         text.count > 600 ? String(text.prefix(600)) + "…" : text
+    }
+
+    @objc private func openSettings() {
+        SettingsWindowController.shared.show()
     }
 
     @objc private func revealLog() {
