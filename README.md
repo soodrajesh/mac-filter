@@ -19,7 +19,7 @@ Foundation — no networking framework is present.
 
 ## Status
 
-Proof of concept, running. Detection core covered by 49 tests. Signed with a stable local identity
+Proof of concept, running. Detection core covered by 50 tests. Signed with a stable local identity
 (see [Install](#install)) so Accessibility and Input Monitoring grants survive rebuilds; both are
 granted on the dev machine and the menubar shows a solid shield. Live interception — actually
 catching a real ⌘V into an AI app — has not yet been exercised end to end. See [Known gaps](#known-gaps).
@@ -203,5 +203,5 @@ Honest list of what a POC does not yet do:
   biggest real-world hole, and the one where `mac-ocr`'s Vision pipeline would slot in directly.
 - **No policy layer.** Detectors are compile-time constants. Per-org allowlists, custom patterns
   and a "never allow critical" enforcement mode are what a paid tier would be built from.
-- **Detection tuning is unproven at scale.** 49 tests is enough to prove the approach, not enough
+- **Detection tuning is unproven at scale.** 50 tests is enough to prove the approach, not enough
   to prove the false-positive rate on a real person's daily clipboard.
