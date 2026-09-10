@@ -156,4 +156,60 @@ extension Severity {
         case .medium:   return .systemYellow
         }
     }
+
+    /// The SF Symbol shown inside this severity's icon tile — a step down in
+    /// urgency from critical to medium, matching the color ramp above.
+    var symbolName: String {
+        switch self {
+        case .critical: return "exclamationmark.octagon.fill"
+        case .high:     return "exclamationmark.triangle.fill"
+        case .medium:   return "exclamationmark.circle.fill"
+        }
+    }
+}
+
+// MARK: - App accent (v2 design system)
+
+extension NSColor {
+    /// MacFilter's own identity color — green, since green reads as
+    /// "safe/protected" throughout this app (the Redact & Paste action, the
+    /// "guarding" status). Deliberately a literal, not `.controlAccentColor`:
+    /// this app's identity color should stay stable even if the user's
+    /// system accent color differs. Matches the app icon's gradient start
+    /// per gogenops's mac-apps v2 design system (`#33BF66`).
+    static let appAccent = NSColor(red: 0.20, green: 0.75, blue: 0.40, alpha: 1.0)
+}
+
+// MARK: - Tinted icon tiles
+
+/// A small rounded-square tile with a centered, tinted SF Symbol — the v2
+/// design system's replacement for a bare `NSImage` sitting directly on a
+/// background. Used for severity icons in the decision panel and the
+/// Appearance-mode icons in Settings.
+final class IconTileView: NSView {
+    private let imageView = NSImageView()
+
+    init(symbolName: String, tint: NSColor, size: CGFloat = 28) {
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.cornerRadius = size * 0.28
+        layer?.backgroundColor = tint.withAlphaComponent(0.15).cgColor
+
+        translatesAutoresizingMaskIntoConstraints = false
+        widthAnchor.constraint(equalToConstant: size).isActive = true
+        heightAnchor.constraint(equalToConstant: size).isActive = true
+
+        let config = NSImage.SymbolConfiguration(pointSize: size * 0.5, weight: .semibold)
+        imageView.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
+            .withSymbolConfiguration(config)
+        imageView.contentTintColor = tint
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(imageView)
+        NSLayoutConstraint.activate([
+            imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            imageView.centerYAnchor.constraint(equalTo: centerYAnchor),
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 }

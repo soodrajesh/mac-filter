@@ -74,13 +74,36 @@ final class SettingsWindowController: NSWindowController {
 
     private func section(title: String, body: NSView) -> NSView {
         let heading = NSTextField(labelWithString: title)
-        heading.font = .app(.body, weight: .semibold)
+        heading.font = .app(.body, weight: .bold)
 
         let stack = NSStackView(views: [heading, body])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 8
-        return stack
+        stack.edgeInsets = NSEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.widthAnchor.constraint(equalToConstant: 312).isActive = true
+
+        // Card container, per the v2 design system: grouped content sits in a
+        // subtly-filled rounded card instead of floating on a flat window
+        // background — this is what most fixed Settings' "text on a plain
+        // gray field" look.
+        let card = NSView()
+        card.wantsLayer = true
+        card.layer?.backgroundColor = NSColor(name: nil) { appearance in
+            appearance.name == .darkAqua || appearance.name == .vibrantDark
+                ? NSColor.white.withAlphaComponent(0.05)
+                : NSColor.black.withAlphaComponent(0.03)
+        }.cgColor
+        card.layer?.cornerRadius = 10
+        card.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: card.topAnchor),
+            stack.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+            stack.bottomAnchor.constraint(equalTo: card.bottomAnchor),
+        ])
+        return card
     }
 
     private func aboutSection() -> NSView {
@@ -91,12 +114,26 @@ final class SettingsWindowController: NSWindowController {
         let versionLabel = NSTextField(labelWithString: "MacFilter \(version) (\(build))")
         versionLabel.font = .app(.body, weight: .medium)
 
+        // Green is this app's accent and its meaning for "safe" throughout —
+        // it belongs on the one always-true claim this window makes, too.
+        // (Not a live "protection active" status: that depends on
+        // permissions the menubar menu already reports, and duplicating it
+        // here without wiring it up would risk it going stale.)
+        let statusTile = IconTileView(symbolName: "checkmark.shield.fill", tint: .appAccent, size: 22)
+        let statusLabel = NSTextField(labelWithString: "Runs entirely on-device")
+        statusLabel.font = .app(.callout, weight: .semibold)
+        statusLabel.textColor = .appAccent
+        let statusRow = NSStackView(views: [statusTile, statusLabel])
+        statusRow.orientation = .horizontal
+        statusRow.spacing = 6
+        statusRow.alignment = .centerY
+
         let claim = NSTextField(wrappingLabelWithString:
             "Nothing pasted through MacFilter ever leaves this Mac. The app makes no network "
             + "connections — verify it yourself with the commands below.")
         claim.font = .app(.callout)
         claim.textColor = .secondaryLabelColor
-        claim.preferredMaxLayoutWidth = 336
+        claim.preferredMaxLayoutWidth = 312
 
         verificationCommands = "otool -L /Applications/MacFilter.app/Contents/MacOS/MacFilter\n"
             + "nm -u /Applications/MacFilter.app/Contents/MacOS/MacFilter"
@@ -108,17 +145,18 @@ final class SettingsWindowController: NSWindowController {
         commandsField.isSelectable = true
         commandsField.maximumNumberOfLines = 2
         commandsField.lineBreakMode = .byTruncatingTail
-        commandsField.preferredMaxLayoutWidth = 336
+        commandsField.preferredMaxLayoutWidth = 312
 
         let copyButton = NSButton(title: "Copy Verification Commands",
                                   target: self, action: #selector(copyVerificationCommands))
         copyButton.bezelStyle = .rounded
         copyButton.font = .app(.callout)
 
-        let stack = NSStackView(views: [versionLabel, claim, commandsField, copyButton])
+        let stack = NSStackView(views: [versionLabel, statusRow, claim, commandsField, copyButton])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 6
+        stack.setCustomSpacing(8, after: statusRow)
         stack.setCustomSpacing(10, after: claim)
         stack.setCustomSpacing(10, after: commandsField)
         return stack
@@ -131,24 +169,24 @@ final class SettingsWindowController: NSWindowController {
     }
 
     private func appearancePicker() -> NSView {
-        let buttons = AppearanceMode.allCases.map { mode -> NSButton in
-            let button = radioButton(title: mode.label, symbol: mode.symbol,
-                                     isOn: mode == AppearanceMode.current,
+        let rows = AppearanceMode.allCases.map { mode -> NSView in
+            let button = radioButton(title: mode.label, isOn: mode == AppearanceMode.current,
                                      action: #selector(appearanceChanged(_:)))
             appearanceButtons[mode] = button
-            return button
+            // A tinted icon tile per the v2 design system, replacing the
+            // bare SF Symbol this radio button used to carry inline.
+            return radioRow(tile: IconTileView(symbolName: mode.symbol, tint: .appAccent, size: 22), button: button)
         }
-        let stack = NSStackView(views: buttons)
+        let stack = NSStackView(views: rows)
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 4
+        stack.spacing = 6
         return stack
     }
 
     private func textSizePicker() -> NSView {
         let buttons = TextSizeSetting.allCases.map { size -> NSButton in
-            let button = radioButton(title: size.label, symbol: nil,
-                                     isOn: size == TextSizeSetting.current,
+            let button = radioButton(title: size.label, isOn: size == TextSizeSetting.current,
                                      action: #selector(textSizeChanged(_:)))
             textSizeButtons[size] = button
             return button
@@ -160,15 +198,19 @@ final class SettingsWindowController: NSWindowController {
         return stack
     }
 
-    private func radioButton(title: String, symbol: String?, isOn: Bool, action: Selector) -> NSButton {
+    private func radioButton(title: String, isOn: Bool, action: Selector) -> NSButton {
         let button = NSButton(radioButtonWithTitle: title, target: self, action: action)
         button.font = .app(.body)
         button.state = isOn ? .on : .off
-        if let symbol, let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) {
-            button.image = image
-            button.imagePosition = .imageLeading
-        }
         return button
+    }
+
+    private func radioRow(tile: NSView, button: NSButton) -> NSView {
+        let row = NSStackView(views: [tile, button])
+        row.orientation = .horizontal
+        row.spacing = 8
+        row.alignment = .centerY
+        return row
     }
 
     // MARK: Actions

@@ -73,16 +73,34 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         let target = destination.detail.map { "\(destination.appName) — \($0)" } ?? destination.appName
+        let highestSeverity = findings.map(\.severity).max() ?? .medium
 
+        let headingTile = IconTileView(symbolName: highestSeverity.symbolName, tint: highestSeverity.color, size: 32)
         let heading = label("Paste blocked", font: .app(.title))
-        let subtitle = label("\(Redactor.summary(of: findings)) found in what you're pasting into \(target).",
-                             font: .app(.body),
-                             color: .secondaryLabelColor)
-        subtitle.preferredMaxLayoutWidth = 396
+        let headingRow = NSStackView(views: [headingTile, heading])
+        headingRow.orientation = .horizontal
+        headingRow.spacing = 10
+        headingRow.alignment = .centerY
 
-        stack.addArrangedSubview(heading)
-        stack.addArrangedSubview(subtitle)
-        stack.setCustomSpacing(14, after: subtitle)
+        // The count summary ("2 critical, 1 high found") is the single most
+        // important line in the panel — it's the answer to "why am I seeing
+        // this?" — so it gets its own bold, prominent style. The destination
+        // clause is secondary context underneath it, not part of the same
+        // sentence weight.
+        let summary = label("\(Redactor.summary(of: findings)) found",
+                            font: .app(.body, weight: .bold))
+        let destinationLine = label("in what you're pasting into \(target).",
+                                    font: .app(.callout),
+                                    color: .secondaryLabelColor)
+        summary.preferredMaxLayoutWidth = 396
+        destinationLine.preferredMaxLayoutWidth = 396
+
+        stack.addArrangedSubview(headingRow)
+        stack.setCustomSpacing(12, after: headingRow)
+        stack.addArrangedSubview(summary)
+        stack.setCustomSpacing(2, after: summary)
+        stack.addArrangedSubview(destinationLine)
+        stack.setCustomSpacing(14, after: destinationLine)
 
         for group in Redactor.grouped(findings) {
             stack.addArrangedSubview(findingRow(group))
@@ -116,11 +134,20 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
         stack.addArrangedSubview(toggle)
         stack.addArrangedSubview(previewField)
 
+        // A calmer, distinct style from the summary above — this is
+        // reassurance, not a warning, and green (the app's own accent) is
+        // this app's color for "safe/protected".
+        let noteTile = IconTileView(symbolName: "lock.shield.fill", tint: .appAccent, size: 20)
         let note = label("Nothing has left this Mac. MacFilter makes no network connections.",
-                         font: .app(.callout),
-                         color: .tertiaryLabelColor)
-        stack.setCustomSpacing(16, after: stack.arrangedSubviews.last ?? note)
-        stack.addArrangedSubview(note)
+                         font: .app(.footnote),
+                         color: .secondaryLabelColor)
+        note.preferredMaxLayoutWidth = 356
+        let noteRow = NSStackView(views: [noteTile, note])
+        noteRow.orientation = .horizontal
+        noteRow.spacing = 8
+        noteRow.alignment = .centerY
+        stack.setCustomSpacing(16, after: stack.arrangedSubviews.last ?? noteRow)
+        stack.addArrangedSubview(noteRow)
 
         let allowButton = button("Paste Original", action: #selector(allowTapped), key: "", identifier: "paste-original")
         // The single highest-stakes control in the app should not read as
@@ -133,14 +160,25 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
                              .font: NSFont.app(.body, weight: .semibold)])
         }
 
+        let redactButton = button("Redact & Paste", action: #selector(redactTapped), key: "\r", identifier: "redact-and-paste")
+        // The success/safe action gets the app's own accent color — green
+        // means "protected" throughout MacFilter, and this is the button that
+        // puts a protected version of the text on the pasteboard.
+        redactButton.bezelColor = .appAccent
+        redactButton.contentTintColor = .white
+        redactButton.attributedTitle = NSAttributedString(
+            string: "Redact & Paste",
+            attributes: [.foregroundColor: NSColor.white,
+                         .font: NSFont.app(.body, weight: .semibold)])
+
         let buttons = NSStackView(views: [
             button("Cancel", action: #selector(cancelTapped), key: "\u{1b}", identifier: "cancel"),
             allowButton,
-            button("Redact & Paste", action: #selector(redactTapped), key: "\r", identifier: "redact-and-paste"),
+            redactButton,
         ])
         buttons.orientation = .horizontal
         buttons.spacing = 8
-        stack.setCustomSpacing(18, after: note)
+        stack.setCustomSpacing(18, after: noteRow)
         stack.addArrangedSubview(buttons)
 
         let container = NSView()
@@ -155,18 +193,55 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
         return container
     }
 
+    /// A single finding as a card: a tinted icon tile for its severity, the
+    /// label, a severity pill, and a colored left accent bar — the v2 design
+    /// system's replacement for a plain text list row.
     private func findingRow(_ group: (label: String, severity: Severity, count: Int)) -> NSView {
-        let dot = label("●", font: .app(.footnote), color: group.severity.color)
+        let accentBar = NSView()
+        accentBar.wantsLayer = true
+        accentBar.layer?.backgroundColor = group.severity.color.cgColor
+        accentBar.layer?.cornerRadius = 1.5
+        accentBar.translatesAutoresizingMaskIntoConstraints = false
+        accentBar.widthAnchor.constraint(equalToConstant: 3).isActive = true
+
+        let tile = IconTileView(symbolName: group.severity.symbolName, tint: group.severity.color, size: 24)
+
         let text = group.count > 1 ? "\(group.label) ×\(group.count)" : group.label
         let name = label(text, font: .app(.body, weight: .medium))
         let severity = label(group.severity.label,
-                             font: .app(.callout),
-                             color: .tertiaryLabelColor)
+                             font: .app(.callout, weight: .medium),
+                             color: group.severity.color)
 
-        let row = NSStackView(views: [dot, name, severity])
-        row.orientation = .horizontal
-        row.spacing = 7
-        return row
+        let textStack = NSStackView(views: [name, severity])
+        textStack.orientation = .vertical
+        textStack.alignment = .leading
+        textStack.spacing = 1
+
+        let content = NSStackView(views: [accentBar, tile, textStack])
+        content.orientation = .horizontal
+        content.spacing = 10
+        content.alignment = .centerY
+        content.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 12)
+        content.translatesAutoresizingMaskIntoConstraints = false
+
+        let card = NSView()
+        card.translatesAutoresizingMaskIntoConstraints = false
+        card.widthAnchor.constraint(equalToConstant: 396).isActive = true
+        card.wantsLayer = true
+        card.layer?.backgroundColor = NSColor(name: nil) { appearance in
+            appearance.name == .darkAqua || appearance.name == .vibrantDark
+                ? NSColor.white.withAlphaComponent(0.06)
+                : NSColor.black.withAlphaComponent(0.035)
+        }.cgColor
+        card.layer?.cornerRadius = 8
+        card.addSubview(content)
+        NSLayoutConstraint.activate([
+            content.topAnchor.constraint(equalTo: card.topAnchor),
+            content.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+            content.bottomAnchor.constraint(equalTo: card.bottomAnchor),
+        ])
+        return card
     }
 
     private func label(_ text: String,
@@ -195,7 +270,22 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
         panel.setContentSize(panel.contentView?.fittingSize ?? NSSize(width: 440, height: 220))
         panel.center()
         NSApp.activate(ignoringOtherApps: true)
+
+        // A subtle appear animation — still not a blocking `NSAlert` (see the
+        // class doc comment above), just an animated `orderFront`. A gentle
+        // scale-and-fade reads as "arriving", not "popping up alarmingly",
+        // which matters for a panel whose whole job is to interrupt calmly.
+        let finalFrame = panel.frame
+        let startFrame = finalFrame.insetBy(dx: finalFrame.width * 0.015, dy: finalFrame.height * 0.015)
+        panel.alphaValue = 0
+        panel.setFrame(startFrame, display: false)
         panel.makeKeyAndOrderFront(nil)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.22
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1
+            panel.animator().setFrame(finalFrame, display: true)
+        }
         NSSound.beep()
     }
 
@@ -222,8 +312,18 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
         guard !finished else { return }
         finished = true
         panel.delegate = nil
-        panel.orderOut(nil)
         if DecisionPanel.active === self { DecisionPanel.active = nil }
+        // The decision itself must resolve synchronously — the interceptor is
+        // waiting on `completion` to release the paste — so only the visual
+        // dismissal is animated; `orderOut` follows the fade rather than
+        // gating it.
         completion(decision)
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.15
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+        }, completionHandler: { [panel] in
+            panel.orderOut(nil)
+        })
     }
 }

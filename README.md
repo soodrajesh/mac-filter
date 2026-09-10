@@ -24,6 +24,11 @@ Proof of concept, running. Detection core covered by 50 tests. Signed with a sta
 granted on the dev machine and the menubar shows a solid shield. Live interception — actually
 catching a real ⌘V into an AI app — has not yet been exercised end to end. See [Known gaps](#known-gaps).
 
+The decision panel and Settings window got a visual refresh: tinted severity icon tiles, a
+card-based finding list, MacFilter's own green accent color on the safe/success actions, and a
+subtle appear/dismiss animation on the panel (still not a blocking `NSAlert` — see
+[How it works](#how-it-works)).
+
 ## What to expect, day to day
 
 **Nothing, almost all the time.** MacFilter only ever looks at a paste if two things are both
