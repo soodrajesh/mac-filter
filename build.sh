@@ -26,7 +26,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 	<key>CFBundleShortVersionString</key>
 	<string>0.2</string>
 	<key>CFBundleVersion</key>
-	<string>3</string>
+	<string>4</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>
@@ -55,12 +55,12 @@ let image = NSImage(size: NSSize(width: size, height: size))
 image.lockFocus()
 
 let bgRect = NSRect(x: 0, y: 0, width: size, height: size)
-NSGradient(starting: NSColor(calibratedRed: 0.85, green: 0.25, blue: 0.20, alpha: 1),
-           ending: NSColor(calibratedRed: 0.24, green: 0.06, blue: 0.10, alpha: 1))?
+NSGradient(starting: NSColor(calibratedRed: 0.20, green: 0.75, blue: 0.40, alpha: 1),
+           ending: NSColor(calibratedRed: 0.04, green: 0.42, blue: 0.22, alpha: 1))?
     .draw(in: bgRect, angle: -90)
 
 let config = NSImage.SymbolConfiguration(pointSize: size * 0.52, weight: .semibold)
-if let symbol = NSImage(systemSymbolName: "shield.lefthalf.filled", accessibilityDescription: nil)?
+if let symbol = NSImage(systemSymbolName: "line.3.horizontal.decrease.circle.fill", accessibilityDescription: nil)?
         .withSymbolConfiguration(config),
    let cg = symbol.cgImage(forProposedRect: nil, context: nil, hints: nil),
    let ctx = NSGraphicsContext.current?.cgContext {
