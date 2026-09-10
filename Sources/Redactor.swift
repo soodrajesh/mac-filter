@@ -26,6 +26,13 @@ enum Redactor {
         return parts.joined(separator: ", ")
     }
 
+    /// Truncates a preview so showing redacted text on screen (the decision
+    /// panel's optional preview, `scanClipboard`'s alert) can never itself
+    /// become a way to dump an unbounded amount of text to a visible window.
+    static func preview(_ text: String, limit: Int = 600) -> String {
+        text.count > limit ? String(text.prefix(limit)) + "…" : text
+    }
+
     /// Groups findings for display: "AWS access key ID ×2".
     static func grouped(_ findings: [Finding]) -> [(label: String, severity: Severity, count: Int)] {
         var counts: [String: (Severity, Int)] = [:]

@@ -20,16 +20,22 @@ final class SettingsWindowController: NSWindowController {
 
     private var appearanceButtons: [AppearanceMode: NSButton] = [:]
     private var textSizeButtons: [TextSizeSetting: NSButton] = [:]
+    private var verificationCommands = ""
 
     private init() {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 360, height: 300),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 380, height: 300),
                               styleMask: [.titled, .closable],
                               backing: .buffered,
                               defer: false)
         window.title = "PasteGuard Settings"
         window.isReleasedWhenClosed = false
         super.init(window: window)
-        window.contentView = buildContent()
+        let content = buildContent()
+        window.contentView = content
+        // Fixed contentRect above is just a starting point; the About section's
+        // wrapped body text makes the real height content-dependent.
+        content.layoutSubtreeIfNeeded()
+        window.setContentSize(content.fittingSize)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -50,6 +56,9 @@ final class SettingsWindowController: NSWindowController {
         stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
+        // First, not last: a skeptical user evaluates a trust claim like this
+        // one at install time, not only after they happen to trigger a block.
+        stack.addArrangedSubview(section(title: "About", body: aboutSection()))
         stack.addArrangedSubview(section(title: "Appearance", body: appearancePicker()))
         stack.addArrangedSubview(section(title: "Text Size", body: textSizePicker()))
 
@@ -72,6 +81,53 @@ final class SettingsWindowController: NSWindowController {
         stack.alignment = .leading
         stack.spacing = 8
         return stack
+    }
+
+    private func aboutSection() -> NSView {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "0.1"
+        let build = info?["CFBundleVersion"] as? String ?? "1"
+
+        let versionLabel = NSTextField(labelWithString: "PasteGuard \(version) (\(build))")
+        versionLabel.font = .app(.body, weight: .medium)
+
+        let claim = NSTextField(wrappingLabelWithString:
+            "Nothing pasted through PasteGuard ever leaves this Mac. The app makes no network "
+            + "connections — verify it yourself with the commands below.")
+        claim.font = .app(.callout)
+        claim.textColor = .secondaryLabelColor
+        claim.preferredMaxLayoutWidth = 336
+
+        verificationCommands = "otool -L /Applications/PasteGuard.app/Contents/MacOS/PasteGuard\n"
+            + "nm -u /Applications/PasteGuard.app/Contents/MacOS/PasteGuard"
+        let commandsField = NSTextField(labelWithString: verificationCommands)
+        commandsField.font = .monospacedSystemFont(ofSize: AppFontStyle.callout.basePointSize
+                                                     * TextSizeSetting.current.scaleFactor,
+                                                     weight: .regular)
+        commandsField.textColor = .labelColor
+        commandsField.isSelectable = true
+        commandsField.maximumNumberOfLines = 2
+        commandsField.lineBreakMode = .byTruncatingTail
+        commandsField.preferredMaxLayoutWidth = 336
+
+        let copyButton = NSButton(title: "Copy Verification Commands",
+                                  target: self, action: #selector(copyVerificationCommands))
+        copyButton.bezelStyle = .rounded
+        copyButton.font = .app(.callout)
+
+        let stack = NSStackView(views: [versionLabel, claim, commandsField, copyButton])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 6
+        stack.setCustomSpacing(10, after: claim)
+        stack.setCustomSpacing(10, after: commandsField)
+        return stack
+    }
+
+    @objc private func copyVerificationCommands() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(verificationCommands, forType: .string)
     }
 
     private func appearancePicker() -> NSView {

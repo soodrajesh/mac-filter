@@ -4,6 +4,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let interceptor = PasteInterceptor()
     private var permissionTimer: Timer?
+    private var didWarnOfPermissionLoss = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -18,24 +19,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         if !interceptor.arm() {
             requestPermissions()
-            // TCC grants land asynchronously and without notification — the
-            // user goes to System Settings, flips a switch, and comes back.
-            // Polling is the only way to notice.
-            permissionTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
-                guard let self else { return }
-                if self.interceptor.arm() {
-                    timer.invalidate()
-                    self.permissionTimer = nil
-                    self.refreshIcon()
-                }
-            }
         }
         refreshIcon()
+        startPermissionMonitor()
     }
 
     private func requestPermissions() {
         if !Permissions.hasAccessibility { Permissions.requestAccessibility() }
         if !Permissions.hasInputMonitoring { Permissions.requestInputMonitoring() }
+    }
+
+    /// Runs for the app's entire lifetime, not just the pre-arm window.
+    ///
+    /// TCC grants can be revoked at any moment via System Settings — by the
+    /// user, or by macOS itself after certain updates — with no notification
+    /// to the process. Without this, an app that armed successfully at launch
+    /// would never notice a later revocation: `isArmed` would stay `true` and
+    /// the menubar would keep showing the solid "guarding" shield while
+    /// nothing was actually being scanned. That is the one failure mode this
+    /// is not allowed to have, being a security tool.
+    private func startPermissionMonitor() {
+        permissionTimer?.invalidate()
+        permissionTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+            self?.reconcilePermissions()
+        }
+    }
+
+    private func reconcilePermissions() {
+        let granted = Permissions.allGranted
+        if granted, !interceptor.isArmed {
+            if interceptor.arm() {
+                didWarnOfPermissionLoss = false
+                refreshIcon()
+            }
+        } else if !granted, interceptor.isArmed {
+            interceptor.disarm()
+            refreshIcon()
+            warnOfPermissionLoss()
+        }
+    }
+
+    /// Shown once per loss, not once ever — if the user regrants and then
+    /// loses it again later, they should hear about it again.
+    private func warnOfPermissionLoss() {
+        guard !didWarnOfPermissionLoss else { return }
+        didWarnOfPermissionLoss = true
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "PasteGuard stopped guarding"
+        alert.informativeText = "Accessibility or Input Monitoring access was turned off in System Settings, "
+            + "so PasteGuard can no longer check what you paste into AI apps. Grant access again to resume "
+            + "protection — until then, pastes go through unchecked."
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "Later")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            if !Permissions.hasAccessibility {
+                Permissions.openAccessibilitySettings()
+            } else if !Permissions.hasInputMonitoring {
+                Permissions.openInputMonitoringSettings()
+            }
+        }
     }
 
     private func refreshIcon() {
@@ -70,6 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(action("Scan Clipboard Now", #selector(scanClipboard)))
         menu.addItem(action("Settings…", #selector(openSettings), key: ","))
+        menu.addItem(action("About PasteGuard…", #selector(openAbout)))
 
         let recent = AuditLog.recentEntries(limit: 5)
         if !recent.isEmpty {
@@ -123,16 +169,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let list = Redactor.grouped(findings)
                 .map { "• \($0.label)\($0.count > 1 ? " ×\($0.count)" : "") — \($0.severity.label)" }
                 .joined(separator: "\n")
-            alert.informativeText = "\(list)\n\nRedacted preview:\n\(preview(Redactor.redact(text, findings: findings)))"
+            alert.informativeText = "\(list)\n\nRedacted preview:\n\(Redactor.preview(Redactor.redact(text, findings: findings)))"
         }
         alert.runModal()
     }
 
-    private func preview(_ text: String) -> String {
-        text.count > 600 ? String(text.prefix(600)) + "…" : text
+    @objc private func openSettings() {
+        SettingsWindowController.shared.show()
     }
 
-    @objc private func openSettings() {
+    @objc private func openAbout() {
         SettingsWindowController.shared.show()
     }
 

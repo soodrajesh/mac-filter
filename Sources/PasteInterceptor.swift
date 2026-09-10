@@ -142,7 +142,7 @@ final class PasteInterceptor {
     // MARK: Decision
 
     private func present(text: String, findings: [Finding], destination: Destination) {
-        DecisionPanel.present(findings: findings, destination: destination) { [weak self] decision in
+        DecisionPanel.present(text: text, findings: findings, destination: destination) { [weak self] decision in
             guard let self else { return }
             AuditLog.record(destination: destination,
                             findings: findings,

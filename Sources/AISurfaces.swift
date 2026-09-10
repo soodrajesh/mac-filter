@@ -20,9 +20,24 @@ enum AISurfaces {
         "com.google.GeminiApp",
         "com.microsoft.copilot",
         "ai.perplexity.mac",
-        "com.todesktop.230313mzl4w4u92",   // Cursor
+        "com.todesktop.230313mzl4w4u92",   // Cursor — verified against the currently installed build
         "dev.warp.Warp-Stable",
         "com.exafunction.windsurf",
+
+        // Terminal emulators. Not AI surfaces in the same sense as the apps
+        // above — most terminal use has nothing to do with AI — but terminal
+        // *agents* (Claude Code, Aider, and similar CLI tools) run inside an
+        // ordinary terminal window with no distinguishing bundle ID or window
+        // title of their own, so there is no way to scope this more finely
+        // without shelling out to inspect the running process tree. Treating
+        // the whole terminal as a surface is the same trade Warp already
+        // makes above; the alternative — recognizing none of them — is a
+        // confirmed, reproduced leak (see README "Known gaps").
+        "com.apple.Terminal",
+        "com.googlecode.iterm2",
+        "com.github.wez.wezterm",
+        "io.alacritty",
+        "co.zeit.hyper",
     ]
 
     /// Browsers, where the destination depends on the active tab rather than

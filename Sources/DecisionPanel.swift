@@ -26,19 +26,23 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
     private let panel: NSPanel
     private let completion: (PasteDecision) -> Void
     private var finished = false
+    private var previewField: NSTextField?
+    private var previewToggle: NSButton?
 
-    static func present(findings: [Finding],
+    static func present(text: String,
+                        findings: [Finding],
                         destination: Destination,
                         completion: @escaping (PasteDecision) -> Void) {
         // Only ever one panel; a second suppressed paste while this is open
         // would otherwise queue up behind it.
         active?.finish(.cancel)
-        let panel = DecisionPanel(findings: findings, destination: destination, completion: completion)
+        let panel = DecisionPanel(text: text, findings: findings, destination: destination, completion: completion)
         active = panel
         panel.show()
     }
 
-    private init(findings: [Finding],
+    private init(text: String,
+                 findings: [Finding],
                  destination: Destination,
                  completion: @escaping (PasteDecision) -> Void) {
         self.completion = completion
@@ -55,12 +59,12 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
         panel.hidesOnDeactivate = false
         panel.delegate = self
 
-        panel.contentView = buildContent(findings: findings, destination: destination)
+        panel.contentView = buildContent(text: text, findings: findings, destination: destination)
     }
 
     // MARK: Layout
 
-    private func buildContent(findings: [Finding], destination: Destination) -> NSView {
+    private func buildContent(text: String, findings: [Finding], destination: Destination) -> NSView {
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -84,16 +88,55 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
             stack.addArrangedSubview(findingRow(group))
         }
 
+        // Show what the *pasted result* will actually look like, not just the
+        // finding labels — so "Redact & Paste" isn't clicked on faith. Short
+        // panels show it open by default; longer ones start collapsed so the
+        // panel doesn't dominate the screen, but are always one click away.
+        let redactedPreview = Redactor.preview(Redactor.redact(text, findings: findings))
+        let showByDefault = text.count <= 300
+
+        let toggle = NSButton(title: showByDefault ? "Hide redacted preview" : "Show redacted preview",
+                              target: self, action: #selector(togglePreview))
+        toggle.bezelStyle = .inline
+        toggle.isBordered = false
+        toggle.font = .app(.callout, weight: .medium)
+        toggle.contentTintColor = .controlAccentColor
+        toggle.setAccessibilityIdentifier("preview-toggle")
+
+        let previewField = label(redactedPreview, font: .app(.callout), color: .secondaryLabelColor)
+        previewField.isSelectable = true
+        previewField.preferredMaxLayoutWidth = 396
+        previewField.maximumNumberOfLines = 8
+        previewField.isHidden = !showByDefault
+        previewField.setAccessibilityIdentifier("redacted-preview")
+        self.previewField = previewField
+        self.previewToggle = toggle
+
+        stack.setCustomSpacing(4, after: stack.arrangedSubviews.last ?? toggle)
+        stack.addArrangedSubview(toggle)
+        stack.addArrangedSubview(previewField)
+
         let note = label("Nothing has left this Mac. PasteGuard makes no network connections.",
                          font: .app(.callout),
                          color: .tertiaryLabelColor)
         stack.setCustomSpacing(16, after: stack.arrangedSubviews.last ?? note)
         stack.addArrangedSubview(note)
 
+        let allowButton = button("Paste Original", action: #selector(allowTapped), key: "", identifier: "paste-original")
+        // The single highest-stakes control in the app should not read as
+        // equally safe as "Redact & Paste" when the batch contains a
+        // critical finding (a full secret key, a private-key block, …).
+        if findings.map(\.severity).max() == .critical {
+            allowButton.attributedTitle = NSAttributedString(
+                string: "Paste Original",
+                attributes: [.foregroundColor: NSColor.systemRed,
+                             .font: NSFont.app(.body, weight: .semibold)])
+        }
+
         let buttons = NSStackView(views: [
-            button("Cancel", action: #selector(cancelTapped), key: "\u{1b}"),
-            button("Paste Original", action: #selector(allowTapped), key: ""),
-            button("Redact & Paste", action: #selector(redactTapped), key: "\r"),
+            button("Cancel", action: #selector(cancelTapped), key: "\u{1b}", identifier: "cancel"),
+            allowButton,
+            button("Redact & Paste", action: #selector(redactTapped), key: "\r", identifier: "redact-and-paste"),
         ])
         buttons.orientation = .horizontal
         buttons.spacing = 8
@@ -137,10 +180,11 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
         return field
     }
 
-    private func button(_ title: String, action: Selector, key: String) -> NSButton {
+    private func button(_ title: String, action: Selector, key: String, identifier: String) -> NSButton {
         let button = NSButton(title: title, target: self, action: action)
         button.bezelStyle = .rounded
         button.keyEquivalent = key
+        button.setAccessibilityIdentifier(identifier)
         return button
     }
 
@@ -158,6 +202,14 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
     @objc private func redactTapped() { finish(.redact) }
     @objc private func allowTapped() { finish(.allow) }
     @objc private func cancelTapped() { finish(.cancel) }
+
+    @objc private func togglePreview() {
+        guard let previewField, let previewToggle else { return }
+        previewField.isHidden.toggle()
+        previewToggle.title = previewField.isHidden ? "Show redacted preview" : "Hide redacted preview"
+        panel.layoutIfNeeded()
+        panel.setContentSize(panel.contentView?.fittingSize ?? panel.frame.size)
+    }
 
     /// Closing the window by any route must resolve the pending paste exactly
     /// once, or the interceptor stays stuck with `isPresenting == true` and
