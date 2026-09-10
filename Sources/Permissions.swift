@@ -2,7 +2,7 @@ import AppKit
 import ApplicationServices
 import IOKit.hid
 
-/// PasteGuard needs two separate TCC grants and they fail differently:
+/// MacFilter needs two separate TCC grants and they fail differently:
 ///
 /// - **Input Monitoring** lets the event tap see ⌘V at all. Without it,
 ///   `CGEvent.tapCreate` returns nil and nothing works.

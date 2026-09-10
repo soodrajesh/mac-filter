@@ -67,9 +67,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "PasteGuard stopped guarding"
+        alert.messageText = "MacFilter stopped guarding"
         alert.informativeText = "Accessibility or Input Monitoring access was turned off in System Settings, "
-            + "so PasteGuard can no longer check what you paste into AI apps. Grant access again to resume "
+            + "so MacFilter can no longer check what you paste into AI apps. Grant access again to resume "
             + "protection — until then, pastes go through unchecked."
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Later")
@@ -85,10 +85,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func refreshIcon() {
         let symbol = interceptor.isArmed ? "shield.lefthalf.filled" : "shield.slash"
-        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "PasteGuard")
+        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "MacFilter")
         statusItem.button?.toolTip = interceptor.isArmed
-            ? "PasteGuard is watching pastes into AI apps"
-            : "PasteGuard needs permissions"
+            ? "MacFilter is watching pastes into AI apps"
+            : "MacFilter needs permissions"
     }
 
     // MARK: Menu
@@ -115,7 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(action("Scan Clipboard Now", #selector(scanClipboard)))
         menu.addItem(action("Settings…", #selector(openSettings), key: ","))
-        menu.addItem(action("About PasteGuard…", #selector(openAbout)))
+        menu.addItem(action("About MacFilter…", #selector(openAbout)))
 
         let recent = AuditLog.recentEntries(limit: 5)
         if !recent.isEmpty {
@@ -134,7 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
-        menu.addItem(action("Quit PasteGuard", #selector(quit), key: "q"))
+        menu.addItem(action("Quit MacFilter", #selector(quit), key: "q"))
     }
 
     private func action(_ title: String, _ selector: Selector, key: String = "") -> NSMenuItem {

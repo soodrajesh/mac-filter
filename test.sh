@@ -4,6 +4,6 @@ cd "$(dirname "$0")"
 
 # The detection core is Foundation-only so it can be compiled and exercised
 # without an app bundle or any TCC permissions.
-OUT="$(mktemp -d)/pasteguard-tests"
+OUT="$(mktemp -d)/macfilter-tests"
 swiftc -O -o "$OUT" Sources/Detectors.swift Sources/Redactor.swift Tests/main.swift
 "$OUT"

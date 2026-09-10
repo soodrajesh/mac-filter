@@ -21,7 +21,7 @@ enum AuditLog {
 
     private static let directory: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return base.appendingPathComponent("PasteGuard", isDirectory: true)
+        return base.appendingPathComponent("MacFilter", isDirectory: true)
     }()
 
     static var fileURL: URL { directory.appendingPathComponent("audit.jsonl") }
@@ -66,7 +66,7 @@ enum AuditLog {
         } catch {
             // A failure to log must never block or alter a paste decision the
             // user has already made.
-            NSLog("PasteGuard: could not write audit entry: \(error.localizedDescription)")
+            NSLog("MacFilter: could not write audit entry: \(error.localizedDescription)")
         }
     }
 

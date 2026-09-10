@@ -116,7 +116,7 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
         stack.addArrangedSubview(toggle)
         stack.addArrangedSubview(previewField)
 
-        let note = label("Nothing has left this Mac. PasteGuard makes no network connections.",
+        let note = label("Nothing has left this Mac. MacFilter makes no network connections.",
                          font: .app(.callout),
                          color: .tertiaryLabelColor)
         stack.setCustomSpacing(16, after: stack.arrangedSubviews.last ?? note)

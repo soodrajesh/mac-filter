@@ -1,5 +1,5 @@
 # Build output
-PasteGuard.app/
+MacFilter.app/
 *.dmg
 
 # macOS

@@ -1,10 +1,10 @@
 import AppKit
 
-/// PasteGuard's one Settings window (⌘,), opened from the menubar menu.
+/// MacFilter's one Settings window (⌘,), opened from the menubar menu.
 ///
 /// Two sections, in the same order as mac-cleanup's `SettingsView`:
 /// Appearance (System/Light/Dark) then Text Size (Small/Medium/Large/Extra
-/// Large). No License section — PasteGuard stays fully free while its core
+/// Large). No License section — MacFilter stays fully free while its core
 /// feature (proven end-to-end interception) is still unproven; monetization
 /// is deliberately deferred, not merely unbuilt yet. No app-specific
 /// preferences yet either — nothing here needs one.
@@ -27,7 +27,7 @@ final class SettingsWindowController: NSWindowController {
                               styleMask: [.titled, .closable],
                               backing: .buffered,
                               defer: false)
-        window.title = "PasteGuard Settings"
+        window.title = "MacFilter Settings"
         window.isReleasedWhenClosed = false
         super.init(window: window)
         let content = buildContent()
@@ -88,18 +88,18 @@ final class SettingsWindowController: NSWindowController {
         let version = info?["CFBundleShortVersionString"] as? String ?? "0.1"
         let build = info?["CFBundleVersion"] as? String ?? "1"
 
-        let versionLabel = NSTextField(labelWithString: "PasteGuard \(version) (\(build))")
+        let versionLabel = NSTextField(labelWithString: "MacFilter \(version) (\(build))")
         versionLabel.font = .app(.body, weight: .medium)
 
         let claim = NSTextField(wrappingLabelWithString:
-            "Nothing pasted through PasteGuard ever leaves this Mac. The app makes no network "
+            "Nothing pasted through MacFilter ever leaves this Mac. The app makes no network "
             + "connections — verify it yourself with the commands below.")
         claim.font = .app(.callout)
         claim.textColor = .secondaryLabelColor
         claim.preferredMaxLayoutWidth = 336
 
-        verificationCommands = "otool -L /Applications/PasteGuard.app/Contents/MacOS/PasteGuard\n"
-            + "nm -u /Applications/PasteGuard.app/Contents/MacOS/PasteGuard"
+        verificationCommands = "otool -L /Applications/MacFilter.app/Contents/MacOS/MacFilter\n"
+            + "nm -u /Applications/MacFilter.app/Contents/MacOS/MacFilter"
         let commandsField = NSTextField(labelWithString: verificationCommands)
         commandsField.font = .monospacedSystemFont(ofSize: AppFontStyle.callout.basePointSize
                                                      * TextSizeSetting.current.scaleFactor,

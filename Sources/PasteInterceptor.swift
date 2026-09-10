@@ -47,7 +47,7 @@ final class PasteInterceptor {
                                           place: .headInsertEventTap,
                                           options: .defaultTap,
                                           eventsOfInterest: mask,
-                                          callback: pasteGuardCallback,
+                                          callback: macFilterCallback,
                                           userInfo: refcon) else {
             return false
         }
@@ -218,7 +218,7 @@ final class PasteInterceptor {
 
 /// Must be a bare C function pointer — a Swift closure that captures context
 /// cannot be used as a `CGEventTapCallBack`, hence the refcon round-trip.
-private let pasteGuardCallback: CGEventTapCallBack = { _, type, event, refcon in
+private let macFilterCallback: CGEventTapCallBack = { _, type, event, refcon in
     guard let refcon else { return Unmanaged.passUnretained(event) }
     let interceptor = Unmanaged<PasteInterceptor>.fromOpaque(refcon).takeUnretainedValue()
     return interceptor.handle(type: type, event: event)

@@ -9,7 +9,7 @@ set -euo pipefail
 # its row in System Settings with the toggle still on, but
 # AXIsProcessTrusted() returns false and the tap never arms.
 #
-# That failure mode matters more for PasteGuard than for most tools: it looks
+# That failure mode matters more for MacFilter than for most tools: it looks
 # exactly like protection being on while nothing is being checked.
 #
 # Safe to re-run — skips creation if the cert already exists.

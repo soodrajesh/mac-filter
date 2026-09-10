@@ -2,8 +2,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="PasteGuard.app"
-BIN="PasteGuard"
+APP="MacFilter.app"
+BIN="MacFilter"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
@@ -12,21 +12,21 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>PasteGuard</string>
+	<string>MacFilter</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.rajeshsood.pasteguard</string>
+	<string>com.rajeshsood.macfilter</string>
 	<key>CFBundleName</key>
-	<string>PasteGuard</string>
+	<string>MacFilter</string>
 	<key>CFBundleDisplayName</key>
-	<string>PasteGuard</string>
+	<string>MacFilter</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.2</string>
 	<key>CFBundleVersion</key>
-	<string>2</string>
+	<string>3</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>
@@ -36,9 +36,9 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSInputMonitoringUsageDescription</key>
-	<string>PasteGuard watches for ⌘V so it can check what you are about to paste into an AI app before it leaves your Mac. Keystrokes are never recorded or transmitted.</string>
+	<string>MacFilter watches for ⌘V so it can check what you are about to paste into an AI app before it leaves your Mac. Keystrokes are never recorded or transmitted.</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>PasteGuard reads the frontmost window's title to tell whether a paste is headed for an AI site. It never reads page content.</string>
+	<string>MacFilter reads the frontmost window's title to tell whether a paste is headed for an AI site. It never reads page content.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Rajesh Sood</string>
 </dict>
@@ -113,13 +113,13 @@ for ARCH in arm64 x86_64; do
   echo "Compiling $ARCH slice…"
   swiftc -O -framework AppKit -framework CoreGraphics -framework ApplicationServices -framework IOKit \
     -target "$ARCH-apple-macos$MIN_OS" \
-    -o "$TMPBIN/PasteGuard-$ARCH" \
+    -o "$TMPBIN/MacFilter-$ARCH" \
     $SOURCES
 done
-lipo -create -output "$APP/Contents/MacOS/PasteGuard" "$TMPBIN/PasteGuard-arm64" "$TMPBIN/PasteGuard-x86_64"
+lipo -create -output "$APP/Contents/MacOS/MacFilter" "$TMPBIN/MacFilter-arm64" "$TMPBIN/MacFilter-x86_64"
 rm -rf "$TMPBIN"
 
-echo "Built $APP ($(lipo -archs "$APP/Contents/MacOS/PasteGuard"))"
+echo "Built $APP ($(lipo -archs "$APP/Contents/MacOS/MacFilter"))"
 
 # --- Sign: hardened runtime + entitlements, no App Sandbox ---
 # A real Developer ID Application identity is used when present. That's what
@@ -141,7 +141,7 @@ if [ -z "$IDENTITY" ]; then
 fi
 # No --deep: Apple deprecated it, and it signs any nested code with the
 # *outer* entitlements. These bundles have no nested code to sign anyway.
-codesign --force --options runtime --entitlements "$(dirname "$0")/PasteGuard.entitlements" --sign "$IDENTITY" "$APP"
+codesign --force --options runtime --entitlements "$(dirname "$0")/MacFilter.entitlements" --sign "$IDENTITY" "$APP"
 echo "Signed with: $IDENTITY (hardened runtime on)"
 
 

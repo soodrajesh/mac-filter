@@ -1,6 +1,6 @@
 import AppKit
 
-// MacGroom-level design system, ported for a pure-AppKit app (PasteGuard has
+// MacGroom-level design system, ported for a pure-AppKit app (MacFilter has
 // no SwiftUI views — the decision panel and Settings window are both built
 // with NSStackView/NSTextField/NSButton). Same conventions as
 // mac-cleanup/Sources/Support.swift, re-expressed with NSFont/NSAppearance

@@ -7,7 +7,7 @@
 # hand. One function, sourced by both, so a future correction only has to
 # happen once.
 
-SIGN_IDENTITY_NAME="PasteGuard Local Dev"
+SIGN_IDENTITY_NAME="MacFilter Local Dev"
 
 # The real question is whether a *valid signing identity* exists, not
 # whether some certificate is sitting in the keychain — `find-certificate -a`

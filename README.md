@@ -1,4 +1,4 @@
-# PasteGuard
+# MacFilter
 
 A menubar app that checks what you're about to paste into an AI tool — **before** it leaves your Mac.
 
@@ -6,12 +6,12 @@ Press ⌘V into Claude, ChatGPT, Cursor, Copilot or an AI site in your browser, 
 contains credentials, payment details or personal data, the paste is stopped and you get a choice:
 redact, paste anyway, or cancel.
 
-**PasteGuard makes no network connections.** Not for telemetry, not for detection, not for updates.
+**MacFilter makes no network connections.** Not for telemetry, not for detection, not for updates.
 Detection runs entirely on-device. This is verifiable, not a promise:
 
 ```
-$ otool -L PasteGuard.app/Contents/MacOS/PasteGuard | grep -i -E "network|cfnetwork"
-$ nm -u PasteGuard.app/Contents/MacOS/PasteGuard | grep -i -E "URLSession|socket|getaddrinfo"
+$ otool -L MacFilter.app/Contents/MacOS/MacFilter | grep -i -E "network|cfnetwork"
+$ nm -u MacFilter.app/Contents/MacOS/MacFilter | grep -i -E "URLSession|socket|getaddrinfo"
 ```
 
 Both return nothing. The binary links AppKit, CoreGraphics, ApplicationServices, IOKit and
@@ -26,7 +26,7 @@ catching a real ⌘V into an AI app — has not yet been exercised end to end. S
 
 ## What to expect, day to day
 
-**Nothing, almost all the time.** PasteGuard only ever looks at a paste if two things are both
+**Nothing, almost all the time.** MacFilter only ever looks at a paste if two things are both
 true: the frontmost app is a recognised AI surface (Claude, ChatGPT, Cursor, Copilot, or a browser
 tab whose title mentions one), *and* the clipboard matches one of the detectors below. Pasting into
 Mail, Slack, a code editor, a terminal — none of that is touched. There's no ongoing scan, no
@@ -43,7 +43,7 @@ Paste blocked
 ● Private key                Critical
 ● IBAN                       High
 
-Nothing has left this Mac. PasteGuard makes no network connections.
+Nothing has left this Mac. MacFilter makes no network connections.
 
 [Cancel]  [Paste Original]  [Redact & Paste]
 ```
@@ -67,7 +67,7 @@ what kind of thing was found and what you chose.
 
 **Settings…** (⌘,) from the menubar menu opens a small window with Appearance
 (System/Light/Dark) and Text Size (Small/Medium/Large/Extra Large) — the same two preferences
-every app in this line ships, matching the shared design system. No license section: PasteGuard
+every app in this line ships, matching the shared design system. No license section: MacFilter
 stays fully free for now, since its core paste-interception feature isn't proven out end to end
 yet (see [Status](#status) and [Known gaps](#known-gaps)); monetization is a deliberately deferred
 later pass, not an oversight.
@@ -79,7 +79,7 @@ unmanaged personal accounts. Every product solving this — Zscaler, Wiz, Forcep
 enterprise-priced, network-layer, and requires routing your traffic through a vendor's cloud. That
 is a strange answer to "we don't want our data leaving the building."
 
-PasteGuard is the opposite shape: local, small, and useless to anyone who wants your data, because
+MacFilter is the opposite shape: local, small, and useless to anyone who wants your data, because
 it never has a way to send it anywhere.
 
 ## What it detects
@@ -112,7 +112,7 @@ health data, and no US-built DLP tool ships it.
 ```bash
 ./setup-signing.sh   # one-time: creates a stable local signing identity
 ./build.sh           # compiles, runs tests, signs, installs to /Applications
-open /Applications/PasteGuard.app
+open /Applications/MacFilter.app
 ```
 
 Requires macOS 13+. No dependencies, no package manager, no Xcode project — just `swiftc`.
@@ -120,7 +120,7 @@ Requires macOS 13+. No dependencies, no package manager, no Xcode project — ju
 **Why `setup-signing.sh` is not optional here.** Ad-hoc signing (`codesign --sign -`) embeds no
 identity, only a hash of the raw binary, so every rebuild produces a different CDHash and macOS
 silently drops any TCC grant keyed to it. The symptom is nasty and specific to a tool like this:
-PasteGuard keeps its row in System Settings → Accessibility **with the toggle still on**, while
+MacFilter keeps its row in System Settings → Accessibility **with the toggle still on**, while
 `AXIsProcessTrusted()` returns false and the event tap never arms. Protection appears enabled while
 nothing is being checked. `setup-signing.sh` creates a self-signed certificate once and trusts it
 for the `codeSign` policy only; `build.sh` then signs with that stable identity. Skip it and
@@ -129,13 +129,13 @@ for the `codeSign` policy only; `build.sh` then signs with that stable identity.
 If grants do get stranded after a rebuild, clear them and re-grant:
 
 ```bash
-tccutil reset Accessibility com.rajeshsood.pasteguard
-tccutil reset ListenEvent   com.rajeshsood.pasteguard
+tccutil reset Accessibility com.rajeshsood.macfilter
+tccutil reset ListenEvent   com.rajeshsood.macfilter
 ```
 
 ### Permissions
 
-PasteGuard needs two grants, and refuses to run half-armed:
+MacFilter needs two grants, and refuses to run half-armed:
 
 - **Input Monitoring** — lets the event tap see ⌘V at all.
 - **Accessibility** — lets it *suppress* the paste and re-post one, and read a browser window's
@@ -166,7 +166,7 @@ runs on that run loop, and a blocked run loop makes macOS disable the tap.
 
 ## Audit log
 
-`~/Library/Application Support/PasteGuard/audit.jsonl`, one JSON object per decision:
+`~/Library/Application Support/MacFilter/audit.jsonl`, one JSON object per decision:
 
 ```json
 {"timestamp":"2026-08-19T14:22:31Z","destinationApp":"Claude","findings":{"aws_access_key_id":1,"iban":1},"highestSeverity":"Critical","decision":"redacted","charactersScanned":842}
@@ -193,10 +193,10 @@ To sanity-check detection against your own real data without staging a paste: co
 
 Honest list of what a POC does not yet do:
 
-- **Self-signed identity, not Developer ID.** `setup-signing.sh` keeps grants stable on *your*
-  machine, but the app is still unsigned as far as Gatekeeper is concerned — anyone else installing
-  it hits the unidentified-developer warning. A real Developer ID certificate plus notarisation is
-  required before distributing this to anyone.
+- **Distribution is now Developer ID + notarized**, via `notarize.sh`/`make-dmg.sh`, so a DMG built
+  from a tagged release passes Gatekeeper on other Macs. A fresh clone with no Apple Developer
+  credentials still builds and runs via `setup-signing.sh`'s local self-signed identity or
+  `build.sh`'s ad-hoc fallback — those just don't produce something distributable to anyone else.
 - **Browser detection is title-based.** If a tab's title doesn't contain a known marker, the paste
   isn't checked. Robust detection would need a browser extension, which breaks the "no extra
   surface" property — a deliberate trade for now.
