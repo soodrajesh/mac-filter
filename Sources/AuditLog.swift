@@ -26,6 +26,13 @@ enum AuditLog {
 
     static var fileURL: URL { directory.appendingPathComponent("audit.jsonl") }
 
+    /// Best-effort `chmod`, silent on failure — a log that can't be locked
+    /// down is still a working log, and refusing to record would be worse.
+    private static func restrictPermissions(of url: URL, to mode: Int) {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        try? FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: url.path)
+    }
+
     private static let formatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime]
@@ -54,7 +61,9 @@ enum AuditLog {
         line.append(0x0A)
 
         do {
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
+                                                    attributes: [.posixPermissions: 0o700])
+            restrictPermissions(of: directory, to: 0o700)
             if FileManager.default.fileExists(atPath: fileURL.path) {
                 let handle = try FileHandle(forWritingTo: fileURL)
                 defer { try? handle.close() }
@@ -63,6 +72,11 @@ enum AuditLog {
             } else {
                 try line.write(to: fileURL, options: .atomic)
             }
+            // The log holds no pasted text (see this file's header), but it
+            // does record which apps you paste sensitive data into and how
+            // often — a behavioural profile worth keeping to this account
+            // rather than leaving world-readable at macOS's default 0644.
+            restrictPermissions(of: fileURL, to: 0o600)
         } catch {
             // A failure to log must never block or alter a paste decision the
             // user has already made.
