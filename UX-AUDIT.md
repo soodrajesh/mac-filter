@@ -75,12 +75,23 @@ characters) inside `buildContent`, reusing the same `Redactor.redact` call `scan
 makes. Keep it capped/truncated exactly as `main.swift:131-133` already does, so the preview itself
 never becomes a way to leak the sensitive spans onto screen unbounded.
 
-### 1.2 No false-positive learning or suppression (High) — **Skipped**
-The audit's own "Summary of fixes by effort" categorizes this as "Larger, roadmap-appropriate
-(already tracked in README's Known Gaps, correctly deferred)" alongside the full policy layer —
-not a cheap/low-risk fix. A correct implementation needs a real persisted (finding-kind ×
-destination) allowlist, UI to manage/clear it, and audit-log interaction, which is app-shape scope
-creep for a POC pass, not a bug fix. Left for the roadmap as the README already states.
+### 1.2 No false-positive learning or suppression (High) — **Fixed (2026-09-11, POC-scoped)**
+Implemented exactly the "POC-appropriate, not the full policy-layer version" fix this finding's
+own writeup below already specified: a "Don't ask again for this, here" checkbox on each finding
+row in `DecisionPanel`, scoped to (finding kind × destination app), persisted in `UserDefaults` via
+the new `SuppressionStore.swift`. `PasteInterceptor.handle` now filters findings through
+`SuppressionStore.isSuppressed` before deciding whether to present the panel at all — if every
+finding present was previously suppressed for this app, the real ⌘V passes through untouched
+(not even swallowed) and the event is still written to the audit log as `"allowed (suppressed)"`,
+so silent-but-invisible was avoided. If only some findings are suppressed, the panel still appears
+for the rest — a previously-dismissed IBAN false positive doesn't hide a newly-appearing AWS key
+in the same paste.
+
+Deliberately still not built: an admin-managed allowlist, custom detector patterns, or a "never
+allow critical" enforcement mode — those remain the real policy-layer scope, now more precisely
+described in the README's Known Gaps rather than conflated with this simpler per-user toggle.
+No UI yet lists or clears individual suppressed entries (`SuppressionStore.allSuppressed`/
+`.clearAll()` exist for a future Settings pane to use). 50/50 tests still pass; build clean.
 
 
 `Detectors.swift` has real false-positive defense at the *pattern* level — Luhn/mod-97/PPSN

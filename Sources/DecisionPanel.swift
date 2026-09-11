@@ -25,9 +25,17 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
 
     private let panel: NSPanel
     private let completion: (PasteDecision) -> Void
+    private let destination: Destination
     private var finished = false
     private var previewField: NSTextField?
     private var previewToggle: NSButton?
+
+    /// One entry per finding-kind row's "Don't ask again for this, here"
+    /// checkbox — checked kinds get persisted to `SuppressionStore` on any
+    /// decision (redact/allow/cancel all count: the checkbox is a separate,
+    /// explicit choice, not tied to which button was pressed). See
+    /// `UX-AUDIT.md` §1.2.
+    private var suppressionCheckboxes: [(kind: String, checkbox: NSButton)] = []
 
     static func present(text: String,
                         findings: [Finding],
@@ -46,6 +54,7 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
                  destination: Destination,
                  completion: @escaping (PasteDecision) -> Void) {
         self.completion = completion
+        self.destination = destination
         self.panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 440, height: 100),
                              styleMask: [.titled, .fullSizeContentView],
                              backing: .buffered,
@@ -196,7 +205,7 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
     /// A single finding as a card: a tinted icon tile for its severity, the
     /// label, a severity pill, and a colored left accent bar — the v2 design
     /// system's replacement for a plain text list row.
-    private func findingRow(_ group: (label: String, severity: Severity, count: Int)) -> NSView {
+    private func findingRow(_ group: (kind: String, label: String, severity: Severity, count: Int)) -> NSView {
         let accentBar = NSView()
         accentBar.wantsLayer = true
         accentBar.layer?.backgroundColor = group.severity.color.cgColor
@@ -212,10 +221,18 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
                              font: .app(.callout, weight: .medium),
                              color: group.severity.color)
 
-        let textStack = NSStackView(views: [name, severity])
+        let suppressCheckbox = NSButton(checkboxWithTitle: "Don't ask again for this, here", target: nil, action: nil)
+        suppressCheckbox.font = .app(.footnote)
+        suppressCheckbox.controlSize = .small
+        suppressCheckbox.contentTintColor = .secondaryLabelColor
+        suppressCheckbox.toolTip = "Stops flagging \"\(group.label)\" specifically when pasting into \(destination.appName). Other apps and other finding kinds are unaffected."
+        suppressionCheckboxes.append((kind: group.kind, checkbox: suppressCheckbox))
+
+        let textStack = NSStackView(views: [name, severity, suppressCheckbox])
         textStack.orientation = .vertical
         textStack.alignment = .leading
         textStack.spacing = 1
+        textStack.setCustomSpacing(4, after: severity)
 
         let content = NSStackView(views: [accentBar, tile, textStack])
         content.orientation = .horizontal
@@ -313,6 +330,10 @@ final class DecisionPanel: NSObject, NSWindowDelegate {
         finished = true
         panel.delegate = nil
         if DecisionPanel.active === self { DecisionPanel.active = nil }
+
+        for entry in suppressionCheckboxes where entry.checkbox.state == .on {
+            SuppressionStore.suppress(kind: entry.kind, appName: destination.appName)
+        }
         // The decision itself must resolve synchronously — the interceptor is
         // waiting on `completion` to release the paste — so only the visual
         // dismissal is animated; `orderOut` follows the fade rather than

@@ -215,7 +215,14 @@ Honest list of what a POC does not yet do:
   the biggest scoping gap, ahead of screenshots.
 - **Text only.** A screenshot of a customer record pasted into Claude is not inspected. This is the
   biggest real-world hole, and the one where `mac-ocr`'s Vision pipeline would slot in directly.
-- **No policy layer.** Detectors are compile-time constants. Per-org allowlists, custom patterns
-  and a "never allow critical" enforcement mode are what a paid tier would be built from.
+- **No policy layer — but per-app "don't ask again" now exists.** Detectors are still
+  compile-time constants, and there's no admin-managed allowlist, custom patterns, or a "never
+  allow critical" enforcement mode — that's still what a paid tier would be built from. What
+  shipped instead (the audit's scoped, POC-appropriate fix): each finding on the decision panel
+  has a "Don't ask again for this, here" checkbox, scoped to (finding kind × destination app) and
+  persisted in `UserDefaults` — dismissing a recurring false positive in one app never quiets a
+  real finding of the same kind pasted somewhere else, or the same kind pasted into a different
+  app. Fully client-side, no UI to review/clear entries yet (`SuppressionStore.allSuppressed`/
+  `.clearAll()` exist for a future Settings pane).
 - **Detection tuning is unproven at scale.** 50 tests is enough to prove the approach, not enough
   to prove the false-positive rate on a real person's daily clipboard.

@@ -130,11 +130,30 @@ final class PasteInterceptor {
         let findings = engine.scan(text)
         guard !findings.isEmpty else { return Unmanaged.passUnretained(event) }
 
+        // Drop any finding the user has already told this specific app to
+        // stop flagging (SuppressionStore — see UX-AUDIT.md §1.2). Scoped to
+        // (kind × destination), so a dismissed false positive in one app
+        // never quiets a genuine finding pasted somewhere else.
+        let effectiveFindings = findings.filter {
+            !SuppressionStore.isSuppressed(kind: $0.kind, appName: destination.appName)
+        }
+        guard !effectiveFindings.isEmpty else {
+            // Every finding here was already suppressed for this app — let
+            // the real ⌘V through untouched (don't even swallow it), but
+            // keep it in the audit trail so "everything got auto-allowed" is
+            // still visible, not silent.
+            AuditLog.record(destination: destination,
+                            findings: findings,
+                            decision: "allowed (suppressed)",
+                            charactersScanned: text.count)
+            return Unmanaged.passUnretained(event)
+        }
+
         // Swallow the keystroke, then decide out of band — the callback must
         // return promptly and cannot present UI itself.
         isPresenting = true
         DispatchQueue.main.async { [weak self] in
-            self?.present(text: text, findings: findings, destination: destination)
+            self?.present(text: text, findings: effectiveFindings, destination: destination)
         }
         return nil
     }

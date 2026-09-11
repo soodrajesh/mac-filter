@@ -34,14 +34,14 @@ enum Redactor {
     }
 
     /// Groups findings for display: "AWS access key ID ×2".
-    static func grouped(_ findings: [Finding]) -> [(label: String, severity: Severity, count: Int)] {
-        var counts: [String: (Severity, Int)] = [:]
+    static func grouped(_ findings: [Finding]) -> [(kind: String, label: String, severity: Severity, count: Int)] {
+        var counts: [String: (label: String, severity: Severity, count: Int)] = [:]
         for finding in findings {
-            let existing = counts[finding.label]
-            counts[finding.label] = (finding.severity, (existing?.1 ?? 0) + 1)
+            let existing = counts[finding.kind]
+            counts[finding.kind] = (finding.label, finding.severity, (existing?.count ?? 0) + 1)
         }
         return counts
-            .map { (label: $0.key, severity: $0.value.0, count: $0.value.1) }
+            .map { (kind: $0.key, label: $0.value.label, severity: $0.value.severity, count: $0.value.count) }
             .sorted { a, b in
                 if a.severity != b.severity { return a.severity > b.severity }
                 return a.label < b.label
