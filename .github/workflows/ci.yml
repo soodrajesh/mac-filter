@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      # build.sh runs ./test.sh (the detection-core suite) itself, under
+      # `set -euo pipefail`, before compiling — a failing test aborts the
+      # build, so there's no separate test step to run here.
+      - name: Build the app (ad-hoc signed, no notarization)
+        run: ./build.sh
