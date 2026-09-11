@@ -115,7 +115,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(action("Scan Clipboard Now", #selector(scanClipboard)))
         menu.addItem(action("Settings…", #selector(openSettings), key: ","))
-        menu.addItem(action("About MacFilter…", #selector(openAbout)))
 
         let recent = AuditLog.recentEntries(limit: 5)
         if !recent.isEmpty {
@@ -175,10 +174,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openSettings() {
-        SettingsWindowController.shared.show()
-    }
-
-    @objc private func openAbout() {
         SettingsWindowController.shared.show()
     }
 
