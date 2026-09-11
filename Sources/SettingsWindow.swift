@@ -2,12 +2,11 @@ import AppKit
 
 /// MacFilter's one Settings window (⌘,), opened from the menubar menu.
 ///
-/// Two sections, in the same order as mac-cleanup's `SettingsView`:
-/// Appearance (System/Light/Dark) then Text Size (Small/Medium/Large/Extra
-/// Large). No License section — MacFilter stays fully free while its core
+/// Sections, in the same order as mac-cleanup's `SettingsView`: Appearance
+/// (System/Light/Dark), Text Size (Small/Medium/Large/Extra Large), then
+/// Updates. No License section — MacFilter stays fully free while its core
 /// feature (proven end-to-end interception) is still unproven; monetization
-/// is deliberately deferred, not merely unbuilt yet. No app-specific
-/// preferences yet either — nothing here needs one.
+/// is deliberately deferred, not merely unbuilt yet.
 ///
 /// Plain AppKit, matching the rest of the app: there's no SwiftUI
 /// `WindowGroup`/`Settings` scene to hang a "Settings not inheriting the
@@ -21,6 +20,8 @@ final class SettingsWindowController: NSWindowController {
     private var appearanceButtons: [AppearanceMode: NSButton] = [:]
     private var textSizeButtons: [TextSizeSetting: NSButton] = [:]
     private var verificationCommands = ""
+    private var updateStatusLabel: NSTextField?
+    private var updateGetItButton: NSButton?
 
     private init() {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 380, height: 300),
@@ -44,6 +45,7 @@ final class SettingsWindowController: NSWindowController {
         window?.center()
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+        refreshUpdateUI()
     }
 
     // MARK: Layout
@@ -61,6 +63,7 @@ final class SettingsWindowController: NSWindowController {
         stack.addArrangedSubview(section(title: "About", body: aboutSection()))
         stack.addArrangedSubview(section(title: "Appearance", body: appearancePicker()))
         stack.addArrangedSubview(section(title: "Text Size", body: textSizePicker()))
+        stack.addArrangedSubview(section(title: "Updates", body: updatesSection()))
 
         let container = NSView()
         container.addSubview(stack)
@@ -170,6 +173,63 @@ final class SettingsWindowController: NSWindowController {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(verificationCommands, forType: .string)
+    }
+
+    /// Reflects `UpdateCheckService`'s cached result (set at launch, and
+    /// again by "Check for Updates" below) — the same cache the menubar
+    /// menu's "vX available" item reads, so the two surfaces never
+    /// disagree.
+    private func updatesSection() -> NSView {
+        let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
+
+        let status = NSTextField(labelWithString: "")
+        status.font = .app(.callout)
+        status.textColor = .secondaryLabelColor
+        status.preferredMaxLayoutWidth = 312
+        status.lineBreakMode = .byWordWrapping
+        status.maximumNumberOfLines = 2
+        updateStatusLabel = status
+
+        let getIt = NSButton(title: "Get It", target: self, action: #selector(openUpdateURL))
+        getIt.bezelStyle = .rounded
+        getIt.font = .app(.callout)
+        getIt.isHidden = true
+        updateGetItButton = getIt
+
+        let checkButton = NSButton(title: "Check for Updates", target: self, action: #selector(checkForUpdates))
+        checkButton.bezelStyle = .rounded
+        checkButton.font = .app(.callout)
+
+        let stack = NSStackView(views: [status, getIt, checkButton])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 8
+        refreshUpdateUI(currentVersion: currentVersion)
+        return stack
+    }
+
+    private func refreshUpdateUI(currentVersion: String? = nil) {
+        let version = currentVersion ?? (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1")
+        guard let status = updateStatusLabel, let getIt = updateGetItButton else { return }
+        if let update = UpdateCheckService.cachedManifest {
+            status.stringValue = "MacFilter \(update.version) is available (you have \(version))."
+            getIt.isHidden = false
+        } else {
+            status.stringValue = "You're on the latest version (\(version))."
+            getIt.isHidden = true
+        }
+    }
+
+    @objc private func checkForUpdates() {
+        Task { [weak self] in
+            await UpdateCheckService.checkForUpdate()
+            await MainActor.run { self?.refreshUpdateUI() }
+        }
+    }
+
+    @objc private func openUpdateURL() {
+        guard let update = UpdateCheckService.cachedManifest, let url = URL(string: update.url) else { return }
+        NSWorkspace.shared.open(url)
     }
 
     private func appearancePicker() -> NSView {

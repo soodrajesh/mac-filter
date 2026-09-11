@@ -22,6 +22,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         refreshIcon()
         startPermissionMonitor()
+
+        // Silent — no alert, no badge if it fails or nothing's newer.
+        // `menuNeedsUpdate` picks up the cached result next time the menu
+        // opens, and the Settings window's Updates section does the same.
+        Task { await UpdateCheckService.checkForUpdate() }
     }
 
     private func requestPermissions() {
@@ -112,6 +117,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
 
+        if let update = UpdateCheckService.cachedManifest {
+            menu.addItem(.separator())
+            menu.addItem(action("MacFilter \(update.version) available — Get It", #selector(openUpdateURL)))
+        }
+
         menu.addItem(.separator())
         menu.addItem(action("Scan Clipboard Now", #selector(scanClipboard)))
         menu.addItem(action("Settings…", #selector(openSettings), key: ","))
@@ -175,6 +185,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func openSettings() {
         SettingsWindowController.shared.show()
+    }
+
+    @objc private func openUpdateURL() {
+        guard let update = UpdateCheckService.cachedManifest, let url = URL(string: update.url) else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func revealLog() {
