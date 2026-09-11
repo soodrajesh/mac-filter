@@ -68,6 +68,10 @@ final class SettingsWindowController: NSWindowController {
             stack.topAnchor.constraint(equalTo: container.topAnchor),
             stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            // Missing bottom anchor left the container's height ambiguous to
+            // AutoLayout — `content.fittingSize` collapsed to ~zero, so the
+            // window opened with a title bar and no visible content at all.
+            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
         return container
     }
