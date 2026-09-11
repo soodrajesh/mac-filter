@@ -26,7 +26,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 	<key>CFBundleShortVersionString</key>
 	<string>0.2</string>
 	<key>CFBundleVersion</key>
-	<string>6</string>
+	<string>7</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>
@@ -60,7 +60,7 @@ NSGradient(starting: NSColor(calibratedRed: 0.20, green: 0.75, blue: 0.40, alpha
     .draw(in: bgRect, angle: -90)
 
 let config = NSImage.SymbolConfiguration(pointSize: size * 0.52, weight: .semibold)
-if let symbol = NSImage(systemSymbolName: "line.3.horizontal.decrease.circle.fill", accessibilityDescription: nil)?
+if let symbol = NSImage(systemSymbolName: "checkmark.shield.fill", accessibilityDescription: nil)?
         .withSymbolConfiguration(config),
    let cg = symbol.cgImage(forProposedRect: nil, context: nil, hints: nil),
    let ctx = NSGraphicsContext.current?.cgContext {
