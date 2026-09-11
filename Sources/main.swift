@@ -90,10 +90,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func refreshIcon() {
         let symbol = interceptor.isArmed ? "shield.lefthalf.filled" : "shield.slash"
-        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "MacFilter")
-        statusItem.button?.toolTip = interceptor.isArmed
+        let status = interceptor.isArmed
             ? "MacFilter is watching pastes into AI apps"
             : "MacFilter needs permissions"
+        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: status)
+        statusItem.button?.toolTip = status
+        // The image's accessibilityDescription above covers most VoiceOver
+        // cases, but setting it on the button too is what's actually
+        // announced when the button itself (not just its image) is the
+        // focused accessibility element.
+        statusItem.button?.setAccessibilityLabel(status)
     }
 
     // MARK: Menu
