@@ -17,12 +17,26 @@ $ nm -u MacFilter.app/Contents/MacOS/MacFilter | grep -i -E "URLSession|socket|g
 Both return nothing. The binary links AppKit, CoreGraphics, ApplicationServices, IOKit and
 Foundation — no networking framework is present.
 
+<p align="center">
+  <img src="screenshots/paste-blocked.png" alt="MacFilter's Paste Blocked panel: 1 critical found — AWS access key ID — with a redacted preview and Cancel / Paste Original / Redact & Paste options" width="420" />
+</p>
+
 ## Status
 
 Proof of concept, running. Detection core covered by 50 tests. Signed with a stable local identity
 (see [Install](#install)) so Accessibility and Input Monitoring grants survive rebuilds; both are
-granted on the dev machine and the menubar shows a solid shield. Live interception — actually
-catching a real ⌘V into an AI app — has not yet been exercised end to end. See [Known gaps](#known-gaps).
+granted on the dev machine and the menubar shows a solid shield. Live interception has been
+verified end-to-end against four real destinations — a live-looking AWS key was caught going into
+each of them (screenshots below) — though that's the developer's own manual testing, not yet field
+experience from real users at scale. See [Known gaps](#known-gaps).
+
+<p align="center">
+  <img src="screenshots/live-claude.png" alt="MacFilter catching an AWS key pasted into the native Claude app" width="23%" />
+  <img src="screenshots/live-chatgpt.png" alt="MacFilter catching an AWS key pasted into ChatGPT in the browser" width="23%" />
+  <img src="screenshots/live-grok.png" alt="MacFilter catching an AWS key pasted into Grok in the browser" width="23%" />
+  <img src="screenshots/live-perplexity.png" alt="MacFilter catching an AWS key pasted into Perplexity in the browser" width="23%" />
+</p>
+<p align="center"><sub>The same AWS key, caught going into four different AI destinations — Claude (native app), ChatGPT, Grok, and Perplexity (browser).</sub></p>
 
 The decision panel and Settings window got a visual refresh: tinted severity icon tiles, a
 card-based finding list, MacFilter's own green accent color on the safe/success actions, and a
