@@ -33,6 +33,15 @@ final class PasteInterceptor {
     var onDecision: (() -> Void)?
     private(set) var isArmed = false
 
+    /// In-memory only — never persisted, never leaves this process. Exists
+    /// so the menu has something concrete to show even before any paste has
+    /// ever been flagged (a fresh install's "Recent" section is empty, which
+    /// otherwise makes the menu look inert rather than merely quiet). Counts
+    /// every paste actually scanned into a recognized AI surface, clean or
+    /// flagged — never what was in it.
+    private(set) var pastesChecked = 0
+    private(set) var pastesFlagged = 0
+
     // MARK: Lifecycle
 
     @discardableResult
@@ -128,7 +137,9 @@ final class PasteInterceptor {
         }
 
         let findings = engine.scan(text)
+        pastesChecked += 1
         guard !findings.isEmpty else { return Unmanaged.passUnretained(event) }
+        pastesFlagged += 1
 
         // Drop any finding the user has already told this specific app to
         // stop flagging (SuppressionStore — see UX-AUDIT.md §1.2). Scoped to
