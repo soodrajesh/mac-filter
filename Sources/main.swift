@@ -113,6 +113,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         status.isEnabled = false
         menu.addItem(status)
 
+        // Always present, even before a single flagged paste — the "Recent"
+        // section below only exists once something's been caught, which
+        // otherwise leaves a fresh install's menu with nothing to show that
+        // the app is actually doing anything. Counts only, never content.
+        if interceptor.isArmed {
+            let stats = NSMenuItem(
+                title: "Session: \(interceptor.pastesChecked) checked · \(interceptor.pastesFlagged) flagged",
+                action: nil, keyEquivalent: "")
+            stats.isEnabled = false
+            menu.addItem(stats)
+        }
+
         if !interceptor.isArmed {
             menu.addItem(.separator())
             if !Permissions.hasAccessibility {
